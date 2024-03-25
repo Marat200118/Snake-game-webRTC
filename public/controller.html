@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Websocket controller</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div class="controller">
+    <div class="control-method-choice">
+      <p>I want to control the snake with:</p>
+      <div class="control-method-choice-buttons">
+        <button id="useGyroscope">Gyroscope</button>
+        <button id="useButtons">Buttons</button>
+      </div>
+    </div>
+    <button class="start">Start Game</button>
+    <div class="game-controls" style="display:none;">
+      <p class="scoreDisplay">Score: 0</p>
+      <button class="reset">Reset</button>
+      <div class="gyroscope-controls" style="display:none;">
+        <div class="ball-container">
+          <div class="ball"></div>
+        </div>
+      </div>
+      <div class="button-controls" style="display:none;">
+        <button class="up">Up</button>
+        <div class="button-controls-horizontal">
+          <button class="left">Left</button>
+          <button class="right">Right</button>
+        </div>
+        <button class="down">Down</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/controller.js"></script>
+</body>
+
+</html>

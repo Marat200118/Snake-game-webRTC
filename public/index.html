@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Websocket assignment Desktop</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div class="greeting-and-instructions">
+    <div class="greeting">
+      <h1>Remote snake - Made with Websockets 🐍</h1>
+      <p>Open this page on your mobile device and use it as a controller to play the game on your desktop.</p>
+    </div>
+    <div class="instructions-and-tips">
+      <div class="instructions">
+        <h2>Instructions 📑</h2>
+        <p>1. Scan the QR code with your phone</p>
+        <p>2. Press start button, to start the game</p>
+        <p>3. Controll the snake with buttons or gyroscope</p>
+        <p>4. Have fun and try to beat me!<br><strong>P.S My record is 590</strong></p>
+      </div>
+      <div class="tips">
+        <h2>Some tips and tricks 👻</h2>
+        <p>1. For better gyroscope experience disable the auto-rotate features</p>
+        <p>2. Hold your phone parallel to the ground</p>
+        <p>3. After rotating on one side, return phone to start position</p>
+      </div>
+    </div>
+  </div>
+  <div class="connection-information">
+    <div id="qr"></div>
+    <a id="url" href=""></a>
+  </div>
+  <div class="start-message"></div>
+  <div class="game">
+    <div class="score"></div>
+    <div class="controlmethod"></div>
+      <canvas id="gameCanvas" width="550" height="550"></canvas>
+    </div>
+    <footer>
+      <p>© 2024 - Made by <a href="https://github.com/Marat200118">Marats Samigullins</a> in <a href="https://www.devine.be/nl">Devine</a></p>
+    </footer>
+    <script src=" /socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
+    <script src="js/script.js"></script>
+
+</body>
+
+</html>
