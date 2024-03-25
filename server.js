@@ -1,68 +1,48 @@
 const express = require("express");
 const app = express();
 const fs = require("fs");
+const https = require("https");
+const socketIO = require("socket.io");
 
 const options = {
   key: fs.readFileSync("localhost.key"),
   cert: fs.readFileSync("localhost.crt"),
 };
 
-const server = require("https").Server(options, app);
+const server = https.createServer(options, app);
 const port = process.env.PORT || 443;
+
+// Serve static files from the "public" directory
 app.use(express.static("public"));
+
+const io = socketIO(server);
 
 server.listen(port, () => {
   console.log(`App listening on port ${port}!`);
 });
 
-const io = require("socket.io")(server);
-
-const clients = {};
-
 io.on("connection", (socket) => {
   console.log("Socket connected", socket.id);
 
-  clients[socket.id] = { id: socket.id, controllerConnected: false };
-
-  socket.on("update", (targetSocketId, data) => {
-    if (!clients[targetSocketId]) {
-      console.log("Target socket not found:", targetSocketId);
-      return;
-    }
-    console.log(`Command received: ${data.command}`);
-    io.to(targetSocketId).emit("update", data);
+  socket.on("offer", (data) => {
+    console.log(`Forwarding offer from ${socket.id} to ${data.to}`);
+    io.to(data.to).emit("offer", { from: socket.id, offer: data.offer });
   });
 
-  socket.on("controllerConnected", () => {
-    console.log("Controller connected for socket:", socket.id);
-    clients[socket.id].controllerConnected = true;
-    io.emit("controllerConnected", true);
+  socket.on("answer", (data) => {
+    console.log(`Forwarding answer from ${socket.id} to ${data.to}`);
+    io.to(data.to).emit("answer", { from: socket.id, answer: data.answer });
   });
 
-  socket.on("scoreUpdate", (data) => {
-    console.log("Score Update", data);
-    io.emit("scoreUpdate", data);
+  socket.on("iceCandidate", (data) => {
+    console.log(`Forwarding ICE candidate from ${socket.id} to ${data.to}`);
+    io.to(data.to).emit("iceCandidate", {
+      from: socket.id,
+      candidate: data.candidate,
+    });
   });
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected", socket.id);
-    io.emit("controllerDisconnected");
-    delete clients[socket.id];
-  });
-
-  socket.on("controllerConnected", (data) => {
-    io.emit("controllerConnected", data);
-  });
-
-  socket.on("controlMethodSelected", (data) => {
-    io.emit("controlMethodSelected", data);
-  });
-
-  socket.on("startGame", (data) => {
-    io.emit("startGame", data);
-  });
-
-  socket.on("resetGame", (data) => {
-    io.emit("resetGame", data);
   });
 });

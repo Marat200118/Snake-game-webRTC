@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Websocket assignment Desktop</title>
+  <title>WebRTC assignment Desktop</title>
   <link rel="stylesheet" href="css/reset.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +17,7 @@
 
   <div class="greeting-and-instructions">
     <div class="greeting">
-      <h1>Remote snake - Made with Websockets 🐍</h1>
+      <h1>Remote snake - Made with WebRTC 🐍</h1>
       <p>Open this page on your mobile device and use it as a controller to play the game on your desktop.</p>
     </div>
     <div class="instructions-and-tips">
@@ -44,14 +44,15 @@
   <div class="game">
     <div class="score"></div>
     <div class="controlmethod"></div>
-      <canvas id="gameCanvas" width="550" height="550"></canvas>
-    </div>
-    <footer>
-      <p>© 2024 - Made by <a href="https://github.com/Marat200118">Marats Samigullins</a> in <a href="https://www.devine.be/nl">Devine</a></p>
-    </footer>
-    <script src=" /socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
-    <script src="js/script.js"></script>
+    <canvas id="gameCanvas" width="550" height="550"></canvas>
+  </div>
+  <footer>
+    <p>© 2024 - Made by <a href="https://github.com/Marat200118">Marats Samigullins</a> in <a href="https://www.devine.be/nl">Devine</a></p>
+  </footer>
+  <script src=" /socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
+  <script src="js/script.js"></script>
 
 </body>
 

@@ -1,6 +1,6 @@
-# Real-Time Snake Game Controller Application with Node.js, Express, and Socket.IO
+# Real-Time Snake Game Controller Application with Node.js, Express, and WebRTC
 
-This repository contains the source code for a real-time game controller application built with Node.js, Express, and Socket.IO. It demonstrates real-time communication between a server and clients, utilizing device orientation for control inputs and providing a visual feedback mechanism via a web interface.
+This repository contains the source code for a real-time game controller application built with Node.js, Express, and WebRTC. It demonstrates real-time communication between a server and clients, utilizing device orientation for control inputs and providing a visual feedback mechanism via a web interface.
 
 User is able to control the snake in the game using either gyroscope controls or button controls. The game state and score are updated in real-time across all connected clients.
 

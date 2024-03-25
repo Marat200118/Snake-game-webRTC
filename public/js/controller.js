@@ -1,7 +1,8 @@
 let socket;
 let targetSocketId;
+let peerConnection;
+let dataChannel;
 let controlMethod = "";
-let gyroscope = new Gyroscope({ frequency: 5 });
 
 const init = () => {
   targetSocketId = getUrlParameter("id");
@@ -10,129 +11,111 @@ const init = () => {
     return;
   }
   socket = io.connect("/");
+
   socket.on("connect", () => {
     console.log(`Connected: ${socket.id}`);
-    socket.emit("controllerConnected", true);
-    setupControlMethodListeners();
-
-    document.getElementById("useGyroscope").addEventListener("click", () => {
-      socket.emit("controlMethodSelected", {
-        method: "gyroscope",
-        controllerId: socket.id,
-      });
-    });
-
-    document.getElementById("useButtons").addEventListener("click", () => {
-      socket.emit("controlMethodSelected", {
-        method: "buttons",
-        controllerId: socket.id,
-      });
-    });
+    setupWebRTC();
   });
 
-  socket.on("scoreUpdate", (data) => {
-    document.querySelector(
-      ".scoreDisplay"
-    ).textContent = `Score: ${data.score}`;
+  document.querySelector(".start").addEventListener("click", () => {
+    peer.send(JSON.stringify({ command: "start" }));
+  });
+  document.querySelector(".reset").addEventListener("click", () => {
+    peer.send(JSON.stringify({ command: "reset" }));
+  });
+  setupControlMethodListeners();
+};
+
+const setupWebRTC = () => {
+  peer = new SimplePeer({
+    initiator: true,
+    trickle: false,
   });
 
-  document.querySelector(".start").addEventListener("click", startGame);
-  document.querySelector(".reset").addEventListener("click", resetGame);
+  peer.on("signal", (data) => {
+    socket.emit("offer", { offer: data, to: targetSocketId });
+  });
+
+  socket.on("answer", (data) => {
+    peer.signal(data.answer);
+  });
+
+  socket.on("iceCandidate", (data) => {
+    if (data.candidate) {
+      peer.signal(data.candidate);
+    }
+  });
+
+  peer.on("connect", () => {
+    console.log("Peer connection established");
+    // Connection established, now you can start sending data
+  });
+
+  peer.on("data", (data) => {
+    console.log("Received data:", data.toString());
+  });
 };
 
 const setupControlMethodListeners = () => {
-  const gyroscopeButton = document.getElementById("useGyroscope");
-  const buttonsButton = document.getElementById("useButtons");
-
-  gyroscopeButton.addEventListener("click", () => {
+  document.getElementById("useGyroscope").addEventListener("click", () => {
     controlMethod = "gyroscope";
-    highlightSelection(gyroscopeButton, buttonsButton);
     setupGyroscopeControlListeners();
-    socket.emit("controlMethod", { method: "gyroscope" });
   });
 
-  buttonsButton.addEventListener("click", () => {
+  document.getElementById("useButtons").addEventListener("click", () => {
     controlMethod = "buttons";
-    highlightSelection(buttonsButton, gyroscopeButton);
     setupButtonControlListeners();
-    socket.emit("controlMethod", { method: "buttons" });
   });
-};
-
-const startGame = () => {
-  if (controlMethod === "") {
-    alert("Please select a control method first.");
-    return;
-  }
-  document.querySelector(".control-method-choice").style.display = "none";
-  document.querySelector(".start").style.display = "none";
-  document.querySelector(".game-controls").style.display = "flex";
-  document.querySelector(
-    controlMethod === "gyroscope" ? ".gyroscope-controls" : ".button-controls"
-  ).style.display = "flex";
-  sendCommand("start");
-};
-
-const resetGame = () => {
-  sendCommand("reset");
 };
 
 const setupGyroscopeControlListeners = () => {
-  if (window.DeviceOrientationEvent) {
-    window.addEventListener("deviceorientation", (event) => {
-      const { alpha, beta, gamma } = event;
-      const $ball = document.querySelector(".ball");
-
-      let topPosition = 40 + beta * 0.7;
-      let leftPosition = 40 + gamma * 0.7;
-
-      topPosition = Math.max(0, Math.min(200, topPosition));
-      leftPosition = Math.max(0, Math.min(200, leftPosition));
-
-      $ball.style.top = `${topPosition}%`;
-      $ball.style.left = `${leftPosition}%`;
-
-      if (beta > 20) {
-        sendCommand("down");
-      } else if (beta < -20) {
-        sendCommand("up");
-      }
-
-      if (gamma > 30) {
+  if ("Gyroscope" in window) {
+    const gyroscope = new Gyroscope({ frequency: 60 });
+    gyroscope.addEventListener("reading", (e) => {
+      if (gyroscope.x > 0.2) {
         sendCommand("right");
-      } else if (gamma < -30) {
+      } else if (gyroscope.x < -0.2) {
         sendCommand("left");
       }
+
+      if (gyroscope.y > 0.2) {
+        sendCommand("down");
+      } else if (gyroscope.y < -0.2) {
+        sendCommand("up");
+      }
     });
+    gyroscope.start();
   } else {
-    console.log("DeviceOrientationEvent is not supported by this device.");
+    console.log("Gyroscope not supported by the browser");
   }
 };
 
 const setupButtonControlListeners = () => {
+  // Setup buttons listeners for manual control
   document
     .querySelector(".up")
     .addEventListener("click", () => sendCommand("up"));
+  document
+    .querySelector(".down")
+    .addEventListener("click", () => sendCommand("down"));
   document
     .querySelector(".left")
     .addEventListener("click", () => sendCommand("left"));
   document
     .querySelector(".right")
     .addEventListener("click", () => sendCommand("right"));
-  document
-    .querySelector(".down")
-    .addEventListener("click", () => sendCommand("down"));
-};
-
-const highlightSelection = (selectedButton, otherButton) => {
-  selectedButton.classList.add("selected");
-  otherButton.classList.remove("selected");
 };
 
 const sendCommand = (command) => {
-  if (socket.connected) {
-    socket.emit("update", targetSocketId, { command });
+  if (peer && peer.connected) {
+    const commandData = JSON.stringify({ command });
+    peer.send(commandData);
   }
+};
+
+const handleIncomingData = (event) => {
+  const data = JSON.parse(event.data);
+  console.log("Data received:", data);
 };
 
 const getUrlParameter = (name) => {

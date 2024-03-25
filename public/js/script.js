@@ -1,14 +1,12 @@
 const $url = document.getElementById("url");
 const $canvas = document.getElementById("gameCanvas");
-const $gameCanvas = document.getElementById("gameCanvas");
 const $game = document.querySelector(".game");
 const $connectionInfo = document.querySelector(".connection-information");
 const $instructions = document.querySelector(".greeting-and-instructions");
-const $controlmethod = document.querySelector(".controlmethod");
 const ctx = $canvas.getContext("2d");
+const socket = io("/");
 
 let gameHasStarted = false;
-let socket;
 let dx = 10;
 let dy = 0;
 let changingDirection = false;
@@ -16,72 +14,131 @@ let foodX;
 let foodY;
 let score = 0;
 let gameLoop;
+let peer;
+
+let peerConnection = new RTCPeerConnection({
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+});
+let dataChannel;
 
 const init = () => {
-  socket = io.connect("/");
+  setupWebRTC();
+  setupSignalingListeners();
+
+  // Display QR code and URL for controller connection
   socket.on("connect", () => {
     console.log(`Connected: ${socket.id}`);
-    const url = `${new URL(
-      `/controller.html?id=${socket.id}`,
-      window.location
-    )}`;
+    const url = `${window.location.origin}/controller.html?id=${socket.id}`;
     $url.textContent = url;
     $url.setAttribute("href", url);
-
-    const typeNumber = 4;
-    const errorCorrectionLevel = "L";
-    const qr = qrcode(typeNumber, errorCorrectionLevel);
-    qr.addData(url);
-    qr.make();
-    document.getElementById("qr").innerHTML = qr.createImgTag(4);
-
+    displayQRCode(url);
     $game.style.display = "none";
+    $connectionInfo.style.display = "flex";
+  });
+};
+
+const setupWebRTC = () => {
+  // Configuration for the peer connection
+  const configuration = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  };
+  peerConnection = new RTCPeerConnection(configuration);
+
+  // Create a data channel for sending game commands
+  dataChannel = peerConnection.createDataChannel("gameControl");
+
+  dataChannel.onopen = () => {
+    console.log("Data channel is open and ready to be used.");
+    $game.style.display = "block";
+    $connectionInfo.style.display = "none";
+    $instructions.style.display = "none";
+  };
+
+  dataChannel.onmessage = handleIncomingData;
+
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("Sending ICE candidate");
+      socket.emit("iceCandidate", { candidate: event.candidate });
+    }
+  };
+};
+
+const setupSignalingListeners = () => {
+  socket.on("connect", () => {
+    console.log(`Game Connected: ${socket.id}`);
   });
 
-  socket.on(`update`, (data) => {
-    const command = data.command;
-    if (command === "start") {
-      if (!gameHasStarted) {
-        startGame();
-      }
-    } else if (command === "reset") {
-      resetGame();
-    } else {
-      changeDirection(command);
+  socket.on("offer", (data) => {
+    console.log(`Received offer from ${data.from}`);
+    if (!peer) {
+      peer = new SimplePeer({
+        initiator: false,
+        trickle: false,
+      });
+
+      peer.on("signal", (answer) => {
+        socket.emit("answer", { answer, to: data.from });
+      });
+
+      peer.on("data", handleIncomingData);
+    }
+    peer.signal(data.offer);
+  });
+
+  socket.on("answer", (data) => {
+    const { answer } = data;
+    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  });
+
+  socket.on("iceCandidate", (data) => {
+    if (data.candidate) {
+      peer.signal(data.candidate);
     }
   });
 
-  socket.on("controllerConnected", () => {
-    $connectionInfo.style.display = "none";
-    $game.style.display = "flex";
-    $gameCanvas.style.display = "block";
-    $instructions.style.display = "none";
-    document.querySelector(".start-message").style.display = "block";
-    document.querySelector(".start-message").innerText =
-      "Choose your control method and press 'start' on your controller to start the game";
-  });
+  // const handleOffer = (offer, from) => {
+  //   peerConnection
+  //     .setRemoteDescription(new RTCSessionDescription(offer))
+  //     .then(() => peerConnection.createAnswer())
+  //     .then((answer) => peerConnection.setLocalDescription(answer))
+  //     .then(() => {
+  //       socket.emit("answer", {
+  //         to: from,
+  //         answer: peerConnection.localDescription,
+  //       });
+  //     });
+  // };
 
-  socket.on("controlMethodSelected", (data) => {
-    console.log(`Control method chosen: ${data.method}`);
-    const message =
-      data.method === "gyroscope"
-        ? "Gyroscope control selected."
-        : "Button control selected.";
-    $controlmethod.textContent = message;
-    $controlmethod.style.display = "block";
+  // Handle ICE candidates from the controller
+  socket.on("iceCandidate", async (message) => {
+    if (message.candidate) {
+      await peerConnection.addIceCandidate(
+        new RTCIceCandidate(message.candidate)
+      );
+    }
   });
+};
 
-  socket.on("controllerDisconnected", () => {
-    $game.style.display = "none";
-    $connectionInfo.style.display = "flex";
-    $instructions.style.display = "flex";
-    $gameCanvas.style.display = "none";
-    document.querySelector(".start-message").style.display = "none";
-  });
+const handleIncomingData = (data) => {
+  try {
+    // Make sure to decode the data correctly if it's coming in as a Blob or ArrayBuffer
+    const parsedData =
+      typeof data === "string"
+        ? JSON.parse(data)
+        : JSON.parse(new TextDecoder("utf-8").decode(data));
+    console.log("Received data:", parsedData);
 
-  socket.on("controlMethod", (data) => {
-    console.log("Control method chosen:", data.method);
-  });
+    if (parsedData.command === "start") {
+      startGame();
+    } else if (parsedData.command === "reset") {
+      resetGame();
+    } else {
+      changeDirection(parsedData.command);
+    }
+  } catch (error) {
+    console.error("Error parsing incoming data:", error);
+  }
 };
 
 let snake = [
@@ -221,6 +278,15 @@ const resetGame = () => {
   createFood();
   drawSnake();
   main();
+};
+
+const displayQRCode = (url) => {
+  const typeNumber = 4;
+  const errorCorrectionLevel = "L";
+  const qr = qrcode(typeNumber, errorCorrectionLevel);
+  qr.addData(url);
+  qr.make();
+  document.getElementById("qr").innerHTML = qr.createImgTag(4, 16);
 };
 
 init();
