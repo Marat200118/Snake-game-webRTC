@@ -59,11 +59,15 @@ const setupWebRTC = () => {
 const setupControlMethodListeners = () => {
   document.getElementById("useGyroscope").addEventListener("click", () => {
     controlMethod = "gyroscope";
+    document.querySelector(".gyroscope-controls").style.display = "block";
+    document.querySelector(".button-controls").style.display = "none";
     setupGyroscopeControlListeners();
   });
 
   document.getElementById("useButtons").addEventListener("click", () => {
     controlMethod = "buttons";
+    document.querySelector(".button-controls").style.display = "block";
+    document.querySelector(".gyroscope-controls").style.display = "none";
     setupButtonControlListeners();
   });
 };
@@ -108,8 +112,7 @@ const setupButtonControlListeners = () => {
 
 const sendCommand = (command) => {
   if (peer && peer.connected) {
-    const commandData = JSON.stringify({ command });
-    peer.send(commandData);
+    peer.send(JSON.stringify({ command: command }));
   }
 };
 

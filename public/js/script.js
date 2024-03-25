@@ -1,6 +1,7 @@
 const $url = document.getElementById("url");
 const $canvas = document.getElementById("gameCanvas");
 const $game = document.querySelector(".game");
+const $score = document.querySelector(".score");
 const $connectionInfo = document.querySelector(".connection-information");
 const $instructions = document.querySelector(".greeting-and-instructions");
 const ctx = $canvas.getContext("2d");
@@ -38,13 +39,11 @@ const init = () => {
 };
 
 const setupWebRTC = () => {
-  // Configuration for the peer connection
   const configuration = {
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
   };
   peerConnection = new RTCPeerConnection(configuration);
 
-  // Create a data channel for sending game commands
   dataChannel = peerConnection.createDataChannel("gameControl");
 
   dataChannel.onopen = () => {
@@ -84,6 +83,13 @@ const setupSignalingListeners = () => {
       peer.on("data", handleIncomingData);
     }
     peer.signal(data.offer);
+    $game.style.display = "flex"; // Show game area
+    document.querySelector(".start-message").style.display = "block";
+    document.querySelector(".start-message").innerText =
+      "Choose your control method and press 'start' on your controller to start the game";
+    $connectionInfo.style.display = "none"; // Hide QR code and URL
+    $instructions.style.display = "none"; // Hide instructions
+    $score.style.display = "block"; // Show score
   });
 
   socket.on("answer", (data) => {
@@ -122,22 +128,22 @@ const setupSignalingListeners = () => {
 
 const handleIncomingData = (data) => {
   try {
-    // Make sure to decode the data correctly if it's coming in as a Blob or ArrayBuffer
-    const parsedData =
-      typeof data === "string"
-        ? JSON.parse(data)
-        : JSON.parse(new TextDecoder("utf-8").decode(data));
+    // Since SimplePeer may send data as a Buffer, we convert it to a string and then parse it as JSON
+    const parsedData = JSON.parse(data.toString());
     console.log("Received data:", parsedData);
 
-    if (parsedData.command === "start") {
-      startGame();
-    } else if (parsedData.command === "reset") {
-      resetGame();
-    } else {
-      changeDirection(parsedData.command);
+    switch (parsedData.command) {
+      case "start":
+        startGame();
+        break;
+      case "reset":
+        resetGame();
+        break;
+      default:
+        changeDirection(parsedData.command);
     }
   } catch (error) {
-    console.error("Error parsing incoming data:", error);
+    console.error("Error handling incoming data:", error);
   }
 };
 
