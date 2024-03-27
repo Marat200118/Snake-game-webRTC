@@ -26,7 +26,6 @@ const init = () => {
   setupWebRTC();
   setupSignalingListeners();
 
-  // Display QR code and URL for controller connection
   socket.on("connect", () => {
     console.log(`Connected: ${socket.id}`);
     const url = `${window.location.origin}/controller.html?id=${socket.id}`;
@@ -39,28 +38,23 @@ const init = () => {
 };
 
 const setupWebRTC = () => {
-  const configuration = {
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  };
-  peerConnection = new RTCPeerConnection(configuration);
+  // No need to create a peer connection or data channel manually, SimplePeer handles this
+  socket.on("signal", (data) => {
+    if (!peer) {
+      peer = new SimplePeer({
+        initiator: false,
+        trickle: false,
+      });
 
-  dataChannel = peerConnection.createDataChannel("gameControl");
+      peer.on("signal", (data) => {
+        socket.emit("signal", { to: data.from, signal: data.signal });
+      });
 
-  dataChannel.onopen = () => {
-    console.log("Data channel is open and ready to be used.");
-    $game.style.display = "block";
-    $connectionInfo.style.display = "none";
-    $instructions.style.display = "none";
-  };
-
-  dataChannel.onmessage = handleIncomingData;
-
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      console.log("Sending ICE candidate");
-      socket.emit("iceCandidate", { candidate: event.candidate });
+      peer.on("data", handleIncomingData);
     }
-  };
+
+    peer.signal(data.signal);
+  });
 };
 
 const setupSignalingListeners = () => {
@@ -83,13 +77,13 @@ const setupSignalingListeners = () => {
       peer.on("data", handleIncomingData);
     }
     peer.signal(data.offer);
-    $game.style.display = "flex"; // Show game area
+    $game.style.display = "flex";
     document.querySelector(".start-message").style.display = "block";
     document.querySelector(".start-message").innerText =
       "Choose your control method and press 'start' on your controller to start the game";
-    $connectionInfo.style.display = "none"; // Hide QR code and URL
-    $instructions.style.display = "none"; // Hide instructions
-    $score.style.display = "block"; // Show score
+    $connectionInfo.style.display = "none";
+    $instructions.style.display = "none";
+    $score.style.display = "block";
   });
 
   socket.on("answer", (data) => {
@@ -103,20 +97,6 @@ const setupSignalingListeners = () => {
     }
   });
 
-  // const handleOffer = (offer, from) => {
-  //   peerConnection
-  //     .setRemoteDescription(new RTCSessionDescription(offer))
-  //     .then(() => peerConnection.createAnswer())
-  //     .then((answer) => peerConnection.setLocalDescription(answer))
-  //     .then(() => {
-  //       socket.emit("answer", {
-  //         to: from,
-  //         answer: peerConnection.localDescription,
-  //       });
-  //     });
-  // };
-
-  // Handle ICE candidates from the controller
   socket.on("iceCandidate", async (message) => {
     if (message.candidate) {
       await peerConnection.addIceCandidate(
@@ -127,23 +107,14 @@ const setupSignalingListeners = () => {
 };
 
 const handleIncomingData = (data) => {
-  try {
-    // Since SimplePeer may send data as a Buffer, we convert it to a string and then parse it as JSON
-    const parsedData = JSON.parse(data.toString());
-    console.log("Received data:", parsedData);
-
-    switch (parsedData.command) {
-      case "start":
-        startGame();
-        break;
-      case "reset":
-        resetGame();
-        break;
-      default:
-        changeDirection(parsedData.command);
-    }
-  } catch (error) {
-    console.error("Error handling incoming data:", error);
+  const parsedData = JSON.parse(data);
+  console.log("Received data:", parsedData);
+  if (parsedData.command === "start") {
+    startGame();
+  } else if (parsedData.command === "reset") {
+    resetGame();
+  } else {
+    changeDirection(parsedData.command);
   }
 };
 

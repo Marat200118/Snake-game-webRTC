@@ -17,12 +17,6 @@ const init = () => {
     setupWebRTC();
   });
 
-  document.querySelector(".start").addEventListener("click", () => {
-    peer.send(JSON.stringify({ command: "start" }));
-  });
-  document.querySelector(".reset").addEventListener("click", () => {
-    peer.send(JSON.stringify({ command: "reset" }));
-  });
   setupControlMethodListeners();
 };
 
@@ -33,17 +27,11 @@ const setupWebRTC = () => {
   });
 
   peer.on("signal", (data) => {
-    socket.emit("offer", { offer: data, to: targetSocketId });
+    socket.emit("signal", { to: targetSocketId, signal: data });
   });
 
-  socket.on("answer", (data) => {
-    peer.signal(data.answer);
-  });
-
-  socket.on("iceCandidate", (data) => {
-    if (data.candidate) {
-      peer.signal(data.candidate);
-    }
+  socket.on("signal", (data) => {
+    peer.signal(data.signal);
   });
 
   peer.on("connect", () => {
@@ -51,8 +39,11 @@ const setupWebRTC = () => {
     // Connection established, now you can start sending data
   });
 
-  peer.on("data", (data) => {
-    console.log("Received data:", data.toString());
+  document.querySelector(".start").addEventListener("click", () => {
+    peer.send(JSON.stringify({ command: "start" }));
+  });
+  document.querySelector(".reset").addEventListener("click", () => {
+    peer.send(JSON.stringify({ command: "reset" }));
   });
 };
 
