@@ -1,8 +1,9 @@
 let socket;
-let targetSocketId;
 let peerConnection;
 let dataChannel;
 let controlMethod = "";
+let peer;
+// let targetSocketId = getUrlParameter("id");
 
 const init = () => {
   targetSocketId = getUrlParameter("id");
@@ -10,14 +11,25 @@ const init = () => {
     alert("Missing target ID in querystring");
     return;
   }
+  initSocket();
+};
+
+const initSocket = () => {
   socket = io.connect("/");
 
   socket.on("connect", () => {
-    console.log(`Connected: ${socket.id}`);
+    console.log(`Controller Connected: ${socket.id}`);
     setupWebRTC();
   });
 
-  setupControlMethodListeners();
+  socket.on("signal", (signal, fromPeerId) => {
+    // Only process the signal if it's meant for this controller
+    if (fromPeerId === targetSocketId) {
+      console.log("Received signal");
+      if (!peer) setupWebRTC();
+      peer.signal(signal);
+    }
+  });
 };
 
 const setupWebRTC = () => {
@@ -27,24 +39,29 @@ const setupWebRTC = () => {
   });
 
   peer.on("signal", (data) => {
-    socket.emit("signal", { to: targetSocketId, signal: data });
-  });
-
-  socket.on("signal", (data) => {
-    peer.signal(data.signal);
+    console.log("Sending signal to", targetSocketId);
+    // Correctly include targetSocketId in the signal emission
+    socket.emit("signal", targetSocketId, data);
   });
 
   peer.on("connect", () => {
     console.log("Peer connection established");
-    // Connection established, now you can start sending data
+    // Now connected to the game, can send game control signals
   });
 
-  document.querySelector(".start").addEventListener("click", () => {
-    peer.send(JSON.stringify({ command: "start" }));
+  peer.on("data", (data) => {
+    console.log("Received data:", new TextDecoder().decode(data));
+    // Process incoming data, such as game state updates
   });
-  document.querySelector(".reset").addEventListener("click", () => {
-    peer.send(JSON.stringify({ command: "reset" }));
-  });
+
+  peer.on("close", () => console.log("Connection closed"));
+  peer.on("error", (err) => console.error("Error:", err));
+};
+
+// Handling of incoming data
+const handleIncomingData = (data) => {
+  const parsedData = JSON.parse(data);
+  console.log("Data received:", parsedData);
 };
 
 const setupControlMethodListeners = () => {
@@ -105,11 +122,6 @@ const sendCommand = (command) => {
   if (peer && peer.connected) {
     peer.send(JSON.stringify({ command: command }));
   }
-};
-
-const handleIncomingData = (event) => {
-  const data = JSON.parse(event.data);
-  console.log("Data received:", data);
 };
 
 const getUrlParameter = (name) => {

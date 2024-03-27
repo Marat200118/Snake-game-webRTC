@@ -4,8 +4,11 @@ const $game = document.querySelector(".game");
 const $score = document.querySelector(".score");
 const $connectionInfo = document.querySelector(".connection-information");
 const $instructions = document.querySelector(".greeting-and-instructions");
+const $startmessage = document.querySelector(".start-message");
 const ctx = $canvas.getContext("2d");
-const socket = io("/");
+
+let socket;
+let targetSocketId;
 
 let gameHasStarted = false;
 let dx = 10;
@@ -17,104 +20,94 @@ let score = 0;
 let gameLoop;
 let peer;
 
-let peerConnection = new RTCPeerConnection({
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-});
-let dataChannel;
+const servers = {
+  iceServers: [
+    {
+      urls: "stun:stun.l.google.com:19302",
+    },
+  ],
+};
 
 const init = () => {
-  setupWebRTC();
-  setupSignalingListeners();
+  // targetSocketId = getUrlParameter("id");
+  // if (!targetSocketId) {
+  //   alert(`Missing target ID in querystring`);
+  //   return;
+  // }
+  initSocket();
+  // createPeer(true, targetSocketId);
+  $game.style.display = "none";
+  $connectionInfo.style.display = "flex";
+};
 
+const initSocket = () => {
+  socket = io.connect("/");
   socket.on("connect", () => {
     console.log(`Connected: ${socket.id}`);
-    const url = `${window.location.origin}/controller.html?id=${socket.id}`;
+    const url = `${new URL(
+      `/controller.html?id=${socket.id}`,
+      window.location
+    )}`;
     $url.textContent = url;
     $url.setAttribute("href", url);
-    displayQRCode(url);
+    const typeNumber = 4;
+    const errorCorrectionLevel = "L";
+    const qr = qrcode(typeNumber, errorCorrectionLevel);
+    qr.addData(url);
+    qr.make();
+    document.getElementById("qr").innerHTML = qr.createImgTag(4);
+  });
+
+  socket.on("signal", (signal, fromPeerId) => {
+    console.log("Received signal from", fromPeerId, signal);
+    if (!peer) {
+      createPeer();
+    }
+    // Directly pass the signal data to peer.signal without parsing as JSON
+    peer.signal(signal);
+  });
+
+  socket.on("controller-disconnect", () => {
+    console.log("Controller has disconnected.");
+    // Add any UI updates or game reset logic here
+    alert("Controller has disconnected. Please refresh to start a new game.");
     $game.style.display = "none";
     $connectionInfo.style.display = "flex";
+    $instructions.style.display = "block";
+    // Optionally, reset the game to its initial state
+    resetGame(); // Ensure you have a function defined to reset the game
   });
 };
 
-const setupWebRTC = () => {
-  // No need to create a peer connection or data channel manually, SimplePeer handles this
-  socket.on("signal", (data) => {
-    if (!peer) {
-      peer = new SimplePeer({
-        initiator: false,
-        trickle: false,
-      });
+const createPeer = () => {
+  peer = new SimplePeer({ initiator: false });
 
-      peer.on("signal", (data) => {
-        socket.emit("signal", { to: data.from, signal: data.signal });
-      });
-
-      peer.on("data", handleIncomingData);
-    }
-
-    peer.signal(data.signal);
-  });
-};
-
-const setupSignalingListeners = () => {
-  socket.on("connect", () => {
-    console.log(`Game Connected: ${socket.id}`);
+  peer.on("signal", (data) => {
+    console.log("Emitting signal");
+    // The signal is now emitted without a specific target since this is the receiver part
+    socket.emit("signal", data);
   });
 
-  socket.on("offer", (data) => {
-    console.log(`Received offer from ${data.from}`);
-    if (!peer) {
-      peer = new SimplePeer({
-        initiator: false,
-        trickle: false,
-      });
-
-      peer.on("signal", (answer) => {
-        socket.emit("answer", { answer, to: data.from });
-      });
-
-      peer.on("data", handleIncomingData);
-    }
-    peer.signal(data.offer);
-    $game.style.display = "flex";
-    document.querySelector(".start-message").style.display = "block";
-    document.querySelector(".start-message").innerText =
-      "Choose your control method and press 'start' on your controller to start the game";
-    $connectionInfo.style.display = "none";
-    $instructions.style.display = "none";
-    $score.style.display = "block";
+  peer.on("connect", () => {
+    console.log("Peer connection established");
+    // Now ready to receive controller commands
   });
 
-  socket.on("answer", (data) => {
-    const { answer } = data;
-    peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  peer.on("data", (data) => {
+    handleGameCommand(JSON.parse(new TextDecoder().decode(data)));
+    // Process incoming control commands
   });
 
-  socket.on("iceCandidate", (data) => {
-    if (data.candidate) {
-      peer.signal(data.candidate);
-    }
-  });
-
-  socket.on("iceCandidate", async (message) => {
-    if (message.candidate) {
-      await peerConnection.addIceCandidate(
-        new RTCIceCandidate(message.candidate)
-      );
-    }
-  });
+  peer.on("close", () => console.log("Connection closed"));
+  peer.on("error", (err) => console.error("Error:", err));
 };
 
 const handleIncomingData = (data) => {
-  const parsedData = JSON.parse(data);
-  console.log("Received data:", parsedData);
-  if (parsedData.command === "start") {
+  const message = data.toString();
+  console.log("Received data:", message);
+
+  if (message === "start game") {
     startGame();
-  } else if (parsedData.command === "reset") {
-    resetGame();
-  } else {
-    changeDirection(parsedData.command);
   }
 };
 
@@ -255,15 +248,6 @@ const resetGame = () => {
   createFood();
   drawSnake();
   main();
-};
-
-const displayQRCode = (url) => {
-  const typeNumber = 4;
-  const errorCorrectionLevel = "L";
-  const qr = qrcode(typeNumber, errorCorrectionLevel);
-  qr.addData(url);
-  qr.make();
-  document.getElementById("qr").innerHTML = qr.createImgTag(4, 16);
 };
 
 init();
