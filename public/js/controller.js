@@ -60,6 +60,7 @@ const initSocket = () => {
   });
 
   socket.on("client-disconnect", (client) => {
+    peer.destroy();
     console.log(`Client disconnected: ${client.id}`);
   });
 };

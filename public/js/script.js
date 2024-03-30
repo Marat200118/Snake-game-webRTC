@@ -49,6 +49,7 @@ const initSocket = () => {
 
   socket.on("client-disconnect", (client) => {
     console.log(`Client disconnected: ${client.id}`);
+    peer.destroy();
     $instructions.style.display = "flex";
     $controlmethod.style.display = "none";
     $game.style.display = "none";
