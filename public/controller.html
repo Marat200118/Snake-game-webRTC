@@ -11,8 +11,33 @@
 </head>
 
 <body>
-  <h2>Controller</h2>
-  <button id="btnPress">Press Me</button>
+  <div class="controller">
+    <div class="control-method-choice">
+      <p>I want to control the snake with:</p>
+      <div class="control-method-choice-buttons">
+        <button id="useGyroscope">Gyroscope</button>
+        <button id="useButtons">Buttons</button>
+      </div>
+    </div>
+    <button class="start">Start Game</button>
+    <div class="game-controls" style="display:none;">
+      <p class="scoreDisplay">Score: 0</p>
+      <button class="reset">Reset</button>
+      <div class="gyroscope-controls" style="display:none;">
+        <div class="ball-container">
+          <div class="ball"></div>
+        </div>
+      </div>
+      <div class="button-controls" style="display:none;">
+        <button class="up">Up</button>
+        <div class="button-controls-horizontal">
+          <button class="left">Left</button>
+          <button class="right">Right</button>
+        </div>
+        <button class="down">Down</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
