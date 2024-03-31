@@ -29,7 +29,6 @@ const init = () => {
     controlMethod = "gyroscope";
     $useGyroscopeButton.classList.add("selected");
     $useButtonsButton.classList.remove("selected");
-    // setupGyroscopeControlListeners();
     peer.send(controlMethod);
   });
 
@@ -37,7 +36,6 @@ const init = () => {
     controlMethod = "buttons";
     $useButtonsButton.classList.add("selected");
     $useGyroscopeButton.classList.remove("selected");
-    // setupButtonControlListeners();
     peer.send(controlMethod);
   });
 
@@ -54,8 +52,6 @@ const initSocket = () => {
   });
 
   socket.on("signal", async (myId, signal, peerId) => {
-    console.log(`Received signal from ${peerId}`);
-    console.log(signal);
     peer.signal(signal);
   });
 
@@ -79,7 +75,6 @@ const createPeer = async () => {
   peer.on("connect", () => {
     console.log("Peer connected, now you can send messages.");
     $startButton.addEventListener("click", () => {
-      console.log("Starting game");
       startGame();
     });
   });

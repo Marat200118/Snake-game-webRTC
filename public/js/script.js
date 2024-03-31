@@ -39,8 +39,6 @@ const initSocket = () => {
   });
 
   socket.on("signal", async (myId, signal, peerId) => {
-    console.log(`Received signal from ${peerId}`);
-    console.log(signal);
     if (signal.type === "offer") {
       answerPeerOffer(myId, signal, peerId);
     }
@@ -74,8 +72,6 @@ const answerPeerOffer = async (myId, offer, peerId) => {
   });
 
   peer.on("data", (data) => {
-    console.log("Data from controller:", data.toString());
-
     switch (data.toString()) {
       case "gyroscope":
         $controlmethod.innerHTML = "Control method: Gyroscope";
